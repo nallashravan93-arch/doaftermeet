@@ -9,49 +9,65 @@
 <meta name="theme-color" content="#4f46e5">
 
 <style>
+* { box-sizing: border-box; }
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
-  background: #f8fafc;
+  background: #f4f6fb;
   color: #111827;
 }
 
 header {
   background: linear-gradient(135deg, #4f46e5, #6366f1);
   color: white;
-  padding: 20px;
+  padding: 28px 20px;
   text-align: center;
 }
 
+header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+header p {
+  margin-top: 8px;
+  font-size: 16px;
+  opacity: 0.9;
+}
+
 .container {
-  max-width: 900px;
+  max-width: 960px;
   margin: auto;
   padding: 20px;
 }
 
 .card {
   background: white;
-  padding: 20px;
+  padding: 22px;
   border-radius: 16px;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.08);
-  margin-bottom: 20px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.08);
+  margin-bottom: 22px;
 }
 
 textarea {
   width: 100%;
-  height: 140px;
+  height: 150px;
   padding: 14px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid #d1d5db;
+  font-size: 15px;
 }
 
 button {
   width: 100%;
   padding: 14px;
-  margin-top: 10px;
-  border-radius: 10px;
+  margin-top: 12px;
+  border-radius: 12px;
   border: none;
   font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
 }
 
 .primary {
@@ -64,20 +80,31 @@ button {
   color: white;
 }
 
-.danger {
-  background: #ef4444;
-  color: white;
+.ghost {
+  background: #eef2ff;
+  color: #4f46e5;
 }
 
 .result {
   background: #f9fafb;
-  padding: 16px;
+  padding: 18px;
   margin-top: 15px;
-  border-radius: 12px;
+  border-radius: 14px;
   white-space: pre-line;
+  font-size: 15px;
 }
 
-.limit {
+.badge {
+  display: inline-block;
+  background: #eef2ff;
+  color: #4f46e5;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.small {
   font-size: 13px;
   color: #6b7280;
   margin-top: 6px;
@@ -85,9 +112,9 @@ button {
 
 .footer {
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
   color: #6b7280;
-  padding: 20px;
+  padding: 30px 20px;
 }
 </style>
 </head>
@@ -95,36 +122,43 @@ button {
 <body>
 
 <header>
-  <h2>DoAfterMeet</h2>
+  <h1>DoAfterMeet</h1>
   <p>Never leave a meeting wondering “what next”</p>
 </header>
 
 <div class="container">
 
+  <!-- LOGIN -->
   <div class="card" id="loginCard">
-    <h3>Welcome</h3>
-    <input id="username" placeholder="Your name" style="width:100%;padding:10px;">
-    <button class="primary" onclick="login()">Continue</button>
+    <span class="badge">Free to try</span>
+    <h3>Turn meeting notes into action</h3>
+    <p class="small">Paste your notes → get tasks, owners & decisions instantly.</p>
+    <input id="username" placeholder="Your name" style="width:100%;padding:12px;border-radius:10px;border:1px solid #d1d5db;">
+    <button class="primary" onclick="login()">Start free</button>
+    <p class="small">No signup · No credit card · 3 free meetings</p>
   </div>
 
+  <!-- APP -->
   <div class="card" id="appCard" style="display:none;">
+    <span class="badge" id="planBadge"></span>
     <p>👋 Hi <strong id="userName"></strong></p>
-    <p>Plan: <strong id="planName"></strong></p>
 
     <textarea id="notes" placeholder="Paste meeting notes here..."></textarea>
-    <button class="primary" onclick="generate()">Generate Action Items</button>
-    <div class="limit" id="limitText"></div>
+
+    <button class="primary" onclick="generate()">Generate action items</button>
+
+    <p class="small" id="usageText"></p>
 
     <div class="result" id="result"></div>
 
     <button class="secondary" id="upgradeBtn" onclick="upgrade()">Upgrade to Pro</button>
-    <button class="danger" onclick="logout()">Logout</button>
+    <button class="ghost" onclick="logout()">Logout</button>
   </div>
 
 </div>
 
 <div class="footer">
-  Free: 3 meetings · Pro: Unlimited · AI-powered
+  Used by founders, managers & remote teams · Free: 3 meetings · Pro: Unlimited
 </div>
 
 <script>
@@ -136,14 +170,9 @@ let user = JSON.parse(localStorage.getItem("doaftermeet_user")) || null;
 
 function login() {
   const name = document.getElementById("username").value.trim();
-  if (!name) return alert("Enter your name");
+  if (!name) return alert("Please enter your name");
 
-  user = {
-    name,
-    plan: "Free",
-    used: 0
-  };
-
+  user = { name, plan: "Free", used: 0 };
   localStorage.setItem("doaftermeet_user", JSON.stringify(user));
   init();
 }
@@ -159,7 +188,7 @@ function upgrade() {
 
 async function generate() {
   if (user.plan === "Free" && user.used >= 3) {
-    alert("Free limit reached. Upgrade to Pro.");
+    alert("Free limit reached. Upgrade to Pro for unlimited use.");
     return;
   }
 
@@ -167,7 +196,7 @@ async function generate() {
   if (!notes) return;
 
   const result = document.getElementById("result");
-  result.innerText = "Analyzing meeting notes…";
+  result.innerText = "Analyzing your meeting…";
 
   const res = await fetch("/api/analyze", {
     method: "POST",
@@ -176,7 +205,7 @@ async function generate() {
   });
 
   const data = await res.json();
-  result.innerText = data.result || "AI failed";
+  result.innerText = data.result || "AI failed. Please try again.";
 
   user.used++;
   localStorage.setItem("doaftermeet_user", JSON.stringify(user));
@@ -185,16 +214,18 @@ async function generate() {
 
 function updateUI() {
   document.getElementById("userName").innerText = user.name;
-  document.getElementById("planName").innerText = user.plan;
 
-  const limitText = document.getElementById("limitText");
+  const badge = document.getElementById("planBadge");
+  const usage = document.getElementById("usageText");
   const upgradeBtn = document.getElementById("upgradeBtn");
 
   if (user.plan === "Free") {
-    limitText.innerText = `Free plan: ${3 - user.used} meetings left`;
+    badge.innerText = "Free plan";
+    usage.innerText = `${3 - user.used} free meetings left`;
     upgradeBtn.style.display = "block";
   } else {
-    limitText.innerText = "Pro plan: Unlimited meetings";
+    badge.innerText = "Pro plan";
+    usage.innerText = "Unlimited meetings";
     upgradeBtn.style.display = "none";
   }
 }
@@ -211,4 +242,3 @@ init();
 
 </body>
 </html>
-
