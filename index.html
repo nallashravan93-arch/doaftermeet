@@ -5,9 +5,10 @@
 <title>DoAfterMeet</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<style>
-* { box-sizing: border-box; }
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4f46e5">
 
+<style>
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
@@ -18,7 +19,7 @@ body {
 header {
   background: linear-gradient(135deg, #4f46e5, #6366f1);
   color: white;
-  padding: 24px;
+  padding: 20px;
   text-align: center;
 }
 
@@ -28,52 +29,41 @@ header {
   padding: 20px;
 }
 
-.card {
-  background: white;
-  padding: 20px;
-  border-radius: 16px;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.08);
-  margin-bottom: 20px;
-}
-
 textarea {
   width: 100%;
-  height: 120px;
-  padding: 12px;
+  height: 140px;
+  padding: 14px;
   border-radius: 10px;
   border: 1px solid #d1d5db;
 }
 
 button {
   width: 100%;
-  padding: 12px;
+  padding: 14px;
+  margin-top: 10px;
   border-radius: 10px;
   border: none;
   font-weight: 600;
-  margin-top: 10px;
 }
 
-.primary { background: #4f46e5; color: white; }
-.secondary { background: #10b981; color: white; }
-.danger { background: #ef4444; color: white; }
-
-.hidden { display: none; }
-
-.history-item {
-  padding: 10px;
-  border-bottom: 1px solid #e5e7eb;
-  cursor: pointer;
+.primary {
+  background: #4f46e5;
+  color: white;
 }
 
-.history-item:hover {
-  background: #f1f5f9;
+.result {
+  background: white;
+  padding: 16px;
+  margin-top: 15px;
+  border-radius: 12px;
+  white-space: pre-line;
 }
 
-.footer {
+footer {
   text-align: center;
   font-size: 12px;
   color: #6b7280;
-  margin-top: 30px;
+  padding: 20px;
 }
 </style>
 </head>
@@ -81,118 +71,42 @@ button {
 <body>
 
 <header>
-  <h1>DoAfterMeet</h1>
-  <p>Turn meeting chaos into clear action</p>
+  <h2>DoAfterMeet</h2>
+  <p>Turn meeting chaos into action</p>
 </header>
 
 <div class="container">
-
-  <!-- LOGIN -->
-  <div class="card" id="loginCard">
-    <h3>Login</h3>
-    <input id="username" placeholder="Your name" style="width:100%;padding:10px;">
-    <button class="primary" onclick="login()">Continue</button>
-  </div>
-
-  <!-- APP -->
-  <div class="card hidden" id="appCard">
-    <p>👋 Hello, <strong id="userDisplay"></strong></p>
-    <p>Plan: <strong id="planDisplay"></strong></p>
-
-    <textarea id="notes" placeholder="Paste meeting notes here..."></textarea>
-    <button class="primary" onclick="generate()">Generate Action Items</button>
-
-    <div id="result" style="margin-top:15px;white-space:pre-line;"></div>
-
-    <button class="secondary" onclick="upgrade()">Upgrade to Pro</button>
-    <button class="danger" onclick="logout()">Logout</button>
-  </div>
-
-  <!-- HISTORY -->
-  <div class="card hidden" id="historyCard">
-    <h3>Meeting History</h3>
-    <div id="history"></div>
-  </div>
-
+  <textarea id="notes" placeholder="Paste meeting notes here..."></textarea>
+  <button class="primary" onclick="generate()">Generate Action Items</button>
+  <div class="result" id="result"></div>
 </div>
 
-<div class="footer">
-  Free: 3 meetings · Pro: Unlimited · Built for professionals who value clarity
-</div>
+<footer>
+  Installable mobile app · Works offline · AI-powered
+</footer>
 
 <script>
-let user = JSON.parse(localStorage.getItem("user")) || null;
-let meetings = JSON.parse(localStorage.getItem("meetings")) || [];
-
-function login() {
-  const name = document.getElementById("username").value.trim();
-  if (!name) return alert("Enter name");
-  user = { name, plan: "Free", count: 0 };
-  localStorage.setItem("user", JSON.stringify(user));
-  init();
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/service-worker.js");
 }
 
-function logout() {
-  localStorage.removeItem("user");
-  location.reload();
-}
+async function generate() {
+  const notes = document.getElementById("notes").value;
+  const result = document.getElementById("result");
 
-function upgrade() {
-  user.plan = "Pro";
-  localStorage.setItem("user", JSON.stringify(user));
-  alert("🎉 You are now Pro!");
-  init();
-}
+  if (!notes) return;
 
-function generate() {
-  if (user.plan === "Free" && user.count >= 3) {
-    alert("Free limit reached. Upgrade to Pro.");
-    return;
-  }
+  result.innerText = "Analyzing…";
 
-  const text = document.getElementById("notes").value;
-  if (!text) return;
-
-  const output = `DECISIONS
-• Launch MVP next month
-
-TASKS
-• Design UI — Owner: ${user.name}
-• Prepare onboarding flow`;
-
-  document.getElementById("result").innerText = output;
-
-  meetings.push({ text, output });
-  localStorage.setItem("meetings", JSON.stringify(meetings));
-
-  user.count++;
-  localStorage.setItem("user", JSON.stringify(user));
-  renderHistory();
-}
-
-function renderHistory() {
-  const h = document.getElementById("history");
-  h.innerHTML = "";
-  meetings.forEach((m, i) => {
-    const div = document.createElement("div");
-    div.className = "history-item";
-    div.innerText = "Meeting " + (i + 1);
-    div.onclick = () => document.getElementById("result").innerText = m.output;
-    h.appendChild(div);
+  const res = await fetch("/api/analyze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: notes })
   });
-}
 
-function init() {
-  if (!user) return;
-  document.getElementById("loginCard").classList.add("hidden");
-  document.getElementById("appCard").classList.remove("hidden");
-  document.getElementById("historyCard").classList.remove("hidden");
-  document.getElementById("userDisplay").innerText = user.name;
-  document.getElementById("planDisplay").innerText = user.plan;
-  renderHistory();
+  const data = await res.json();
+  result.innerText = data.result || "AI failed";
 }
-
-init();
 </script>
 
 </body>
