@@ -29,6 +29,14 @@ header {
   padding: 20px;
 }
 
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+  margin-bottom: 20px;
+}
+
 textarea {
   width: 100%;
   height: 140px;
@@ -51,15 +59,31 @@ button {
   color: white;
 }
 
+.secondary {
+  background: #10b981;
+  color: white;
+}
+
+.danger {
+  background: #ef4444;
+  color: white;
+}
+
 .result {
-  background: white;
+  background: #f9fafb;
   padding: 16px;
   margin-top: 15px;
   border-radius: 12px;
   white-space: pre-line;
 }
 
-footer {
+.limit {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+.footer {
   text-align: center;
   font-size: 12px;
   color: #6b7280;
@@ -72,31 +96,78 @@ footer {
 
 <header>
   <h2>DoAfterMeet</h2>
-  <p>Turn meeting chaos into action</p>
+  <p>Never leave a meeting wondering “what next”</p>
 </header>
 
 <div class="container">
-  <textarea id="notes" placeholder="Paste meeting notes here..."></textarea>
-  <button class="primary" onclick="generate()">Generate Action Items</button>
-  <div class="result" id="result"></div>
+
+  <div class="card" id="loginCard">
+    <h3>Welcome</h3>
+    <input id="username" placeholder="Your name" style="width:100%;padding:10px;">
+    <button class="primary" onclick="login()">Continue</button>
+  </div>
+
+  <div class="card" id="appCard" style="display:none;">
+    <p>👋 Hi <strong id="userName"></strong></p>
+    <p>Plan: <strong id="planName"></strong></p>
+
+    <textarea id="notes" placeholder="Paste meeting notes here..."></textarea>
+    <button class="primary" onclick="generate()">Generate Action Items</button>
+    <div class="limit" id="limitText"></div>
+
+    <div class="result" id="result"></div>
+
+    <button class="secondary" id="upgradeBtn" onclick="upgrade()">Upgrade to Pro</button>
+    <button class="danger" onclick="logout()">Logout</button>
+  </div>
+
 </div>
 
-<footer>
-  Installable mobile app · Works offline · AI-powered
-</footer>
+<div class="footer">
+  Free: 3 meetings · Pro: Unlimited · AI-powered
+</div>
 
 <script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/service-worker.js");
+/* ================= CONFIG ================= */
+const STRIPE_LINK = "https://buy.stripe.com/test_aFaaEYf6z6os7eL1ZTbsc00";
+/* ========================================== */
+
+let user = JSON.parse(localStorage.getItem("doaftermeet_user")) || null;
+
+function login() {
+  const name = document.getElementById("username").value.trim();
+  if (!name) return alert("Enter your name");
+
+  user = {
+    name,
+    plan: "Free",
+    used: 0
+  };
+
+  localStorage.setItem("doaftermeet_user", JSON.stringify(user));
+  init();
+}
+
+function logout() {
+  localStorage.removeItem("doaftermeet_user");
+  location.reload();
+}
+
+function upgrade() {
+  window.location.href = STRIPE_LINK;
 }
 
 async function generate() {
-  const notes = document.getElementById("notes").value;
-  const result = document.getElementById("result");
+  if (user.plan === "Free" && user.used >= 3) {
+    alert("Free limit reached. Upgrade to Pro.");
+    return;
+  }
 
+  const notes = document.getElementById("notes").value;
   if (!notes) return;
 
-  result.innerText = "Analyzing…";
+  const result = document.getElementById("result");
+  result.innerText = "Analyzing meeting notes…";
 
   const res = await fetch("/api/analyze", {
     method: "POST",
@@ -106,8 +177,38 @@ async function generate() {
 
   const data = await res.json();
   result.innerText = data.result || "AI failed";
+
+  user.used++;
+  localStorage.setItem("doaftermeet_user", JSON.stringify(user));
+  updateUI();
 }
+
+function updateUI() {
+  document.getElementById("userName").innerText = user.name;
+  document.getElementById("planName").innerText = user.plan;
+
+  const limitText = document.getElementById("limitText");
+  const upgradeBtn = document.getElementById("upgradeBtn");
+
+  if (user.plan === "Free") {
+    limitText.innerText = `Free plan: ${3 - user.used} meetings left`;
+    upgradeBtn.style.display = "block";
+  } else {
+    limitText.innerText = "Pro plan: Unlimited meetings";
+    upgradeBtn.style.display = "none";
+  }
+}
+
+function init() {
+  if (!user) return;
+  document.getElementById("loginCard").style.display = "none";
+  document.getElementById("appCard").style.display = "block";
+  updateUI();
+}
+
+init();
 </script>
 
 </body>
 </html>
+
