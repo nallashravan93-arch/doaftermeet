@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>DoAfterMeet</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#4f46e5">
 
-<style>
-* { box-sizing: border-box; }
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
+<style>
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
@@ -21,100 +21,56 @@ body {
 header {
   background: linear-gradient(135deg, #4f46e5, #6366f1);
   color: white;
-  padding: 28px 20px;
+  padding: 28px;
   text-align: center;
 }
 
-header h1 {
-  margin: 0;
-  font-size: 28px;
-}
-
-header p {
-  margin-top: 8px;
-  font-size: 16px;
-  opacity: 0.9;
-}
-
 .container {
-  max-width: 960px;
+  max-width: 900px;
   margin: auto;
   padding: 20px;
 }
 
 .card {
   background: white;
-  padding: 22px;
+  padding: 24px;
   border-radius: 16px;
   box-shadow: 0 16px 40px rgba(0,0,0,0.08);
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
-textarea {
+input, textarea {
   width: 100%;
-  height: 150px;
   padding: 14px;
   border-radius: 12px;
   border: 1px solid #d1d5db;
-  font-size: 15px;
+  margin-top: 10px;
 }
 
 button {
   width: 100%;
   padding: 14px;
-  margin-top: 12px;
   border-radius: 12px;
   border: none;
+  margin-top: 12px;
   font-weight: 600;
-  font-size: 15px;
   cursor: pointer;
 }
 
-.primary {
-  background: #4f46e5;
-  color: white;
-}
-
-.secondary {
-  background: #10b981;
-  color: white;
-}
-
-.ghost {
-  background: #eef2ff;
-  color: #4f46e5;
-}
+.primary { background: #4f46e5; color: white; }
+.secondary { background: #10b981; color: white; }
 
 .result {
   background: #f9fafb;
   padding: 18px;
-  margin-top: 15px;
   border-radius: 14px;
   white-space: pre-line;
-  font-size: 15px;
-}
-
-.badge {
-  display: inline-block;
-  background: #eef2ff;
-  color: #4f46e5;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  margin-bottom: 10px;
+  margin-top: 14px;
 }
 
 .small {
   font-size: 13px;
   color: #6b7280;
-  margin-top: 6px;
-}
-
-.footer {
-  text-align: center;
-  font-size: 13px;
-  color: #6b7280;
-  padding: 30px 20px;
 }
 </style>
 </head>
@@ -130,73 +86,66 @@ button {
 
   <!-- LOGIN -->
   <div class="card" id="loginCard">
-    <span class="badge">Free to try</span>
-    <h3>Turn meeting notes into action</h3>
-    <p class="small">Paste your notes → get tasks, owners & decisions instantly.</p>
-    <input id="username" placeholder="Your name" style="width:100%;padding:12px;border-radius:10px;border:1px solid #d1d5db;">
-    <button class="primary" onclick="login()">Start free</button>
-    <p class="small">No signup · No credit card · 3 free meetings</p>
+    <h3>Sign in to continue</h3>
+    <p class="small">We’ll send you a secure magic link.</p>
+    <input id="emailInput" type="email" placeholder="you@company.com" />
+    <button class="primary" onclick="login()">Send magic link</button>
+    <p class="small" id="loginStatus"></p>
   </div>
 
   <!-- APP -->
   <div class="card" id="appCard" style="display:none;">
-    <span class="badge" id="planBadge"></span>
-    <p>👋 Hi <strong id="userName"></strong></p>
+    <p>👋 Logged in as <strong id="userEmail"></strong></p>
 
     <textarea id="notes" placeholder="Paste meeting notes here..."></textarea>
-
-    <button class="primary" onclick="generate()">Generate action items</button>
-
-    <p class="small" id="usageText"></p>
+    <button class="primary" onclick="generate()">Generate Action Items</button>
 
     <div class="result" id="result"></div>
 
-    <button class="secondary" id="upgradeBtn" onclick="upgrade()">Upgrade to Pro</button>
-    <button class="ghost" onclick="logout()">Logout</button>
+    <button class="secondary" onclick="logout()">Logout</button>
   </div>
 
 </div>
 
-<div class="footer">
-  Used by founders, managers & remote teams · Free: 3 meetings · Pro: Unlimited
-</div>
-
 <script>
-/* ================= CONFIG ================= */
-const STRIPE_LINK = "https://buy.stripe.com/test_aFaaEYf6z6os7eL1ZTbsc00";
-/* ========================================== */
+/* ================= SUPABASE CONFIG ================= */
+const SUPABASE_URL = "https://vkoyrewmaurbsxxvyhuf.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrb3lyZXdtYXVyYnN4eHZ5aHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5NzM2OTAsImV4cCI6MjA4NDU0OTY5MH0.UpvMq4KN1XZgNeJUAK1pn1q2TnXDSkyRI6bMbwjgNG8";
 
-let user = JSON.parse(localStorage.getItem("doaftermeet_user")) || null;
+const supabase = supabasejs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+/* ================================================== */
 
-function login() {
-  const name = document.getElementById("username").value.trim();
-  if (!name) return alert("Please enter your name");
+async function login() {
+  const email = document.getElementById("emailInput").value;
+  const status = document.getElementById("loginStatus");
 
-  user = { name, plan: "Free", used: 0 };
-  localStorage.setItem("doaftermeet_user", JSON.stringify(user));
-  init();
-}
-
-function logout() {
-  localStorage.removeItem("doaftermeet_user");
-  location.reload();
-}
-
-function upgrade() {
-  window.location.href = STRIPE_LINK;
-}
-
-async function generate() {
-  if (user.plan === "Free" && user.used >= 3) {
-    alert("Free limit reached. Upgrade to Pro for unlimited use.");
+  if (!email) {
+    status.innerText = "Please enter your email.";
     return;
   }
 
+  status.innerText = "Sending magic link…";
+
+  const { error } = await supabase.auth.signInWithOtp({ email });
+
+  if (error) {
+    status.innerText = "Error sending email.";
+  } else {
+    status.innerText = "Check your email for the login link.";
+  }
+}
+
+async function logout() {
+  await supabase.auth.signOut();
+  location.reload();
+}
+
+async function generate() {
   const notes = document.getElementById("notes").value;
   if (!notes) return;
 
   const result = document.getElementById("result");
-  result.innerText = "Analyzing your meeting…";
+  result.innerText = "Analyzing…";
 
   const res = await fetch("/api/analyze", {
     method: "POST",
@@ -205,39 +154,16 @@ async function generate() {
   });
 
   const data = await res.json();
-  result.innerText = data.result || "AI failed. Please try again.";
-
-  user.used++;
-  localStorage.setItem("doaftermeet_user", JSON.stringify(user));
-  updateUI();
+  result.innerText = data.result || "AI failed";
 }
 
-function updateUI() {
-  document.getElementById("userName").innerText = user.name;
-
-  const badge = document.getElementById("planBadge");
-  const usage = document.getElementById("usageText");
-  const upgradeBtn = document.getElementById("upgradeBtn");
-
-  if (user.plan === "Free") {
-    badge.innerText = "Free plan";
-    usage.innerText = `${3 - user.used} free meetings left`;
-    upgradeBtn.style.display = "block";
-  } else {
-    badge.innerText = "Pro plan";
-    usage.innerText = "Unlimited meetings";
-    upgradeBtn.style.display = "none";
+supabase.auth.onAuthStateChange((event, session) => {
+  if (session?.user) {
+    document.getElementById("loginCard").style.display = "none";
+    document.getElementById("appCard").style.display = "block";
+    document.getElementById("userEmail").innerText = session.user.email;
   }
-}
-
-function init() {
-  if (!user) return;
-  document.getElementById("loginCard").style.display = "none";
-  document.getElementById("appCard").style.display = "block";
-  updateUI();
-}
-
-init();
+});
 </script>
 
 </body>
