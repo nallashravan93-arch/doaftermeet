@@ -1,170 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>DoAfterMeet</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8" />
+  <title>DoAfterMeet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#4f46e5">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
-<style>
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
-  background: #f4f6fb;
-  color: #111827;
-}
-
-header {
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
-  color: white;
-  padding: 28px;
-  text-align: center;
-}
-
-.container {
-  max-width: 900px;
-  margin: auto;
-  padding: 20px;
-}
-
-.card {
-  background: white;
-  padding: 24px;
-  border-radius: 16px;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.08);
-  margin-bottom: 24px;
-}
-
-input, textarea {
-  width: 100%;
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid #d1d5db;
-  margin-top: 10px;
-}
-
-button {
-  width: 100%;
-  padding: 14px;
-  border-radius: 12px;
-  border: none;
-  margin-top: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.primary { background: #4f46e5; color: white; }
-.secondary { background: #10b981; color: white; }
-
-.result {
-  background: #f9fafb;
-  padding: 18px;
-  border-radius: 14px;
-  white-space: pre-line;
-  margin-top: 14px;
-}
-
-.small {
-  font-size: 13px;
-  color: #6b7280;
-}
-</style>
+  <style>
+    body {
+      font-family: Inter, sans-serif;
+      background: #f5f7fb;
+      margin: 0;
+      padding: 24px;
+    }
+    .app {
+      max-width: 700px;
+      margin: auto;
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.1);
+    }
+    h1 { text-align: center; }
+    textarea {
+      width: 100%;
+      height: 160px;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 12px;
+      font-size: 16px;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: #10b981;
+    }
+    .output {
+      margin-top: 20px;
+      background: #f9fafb;
+      padding: 16px;
+      border-radius: 8px;
+      white-space: pre-line;
+    }
+  </style>
 </head>
 
 <body>
-
-<header>
+<div class="app">
   <h1>DoAfterMeet</h1>
-  <p>Never leave a meeting wondering “what next”</p>
-</header>
 
-<div class="container">
+  <input id="email" placeholder="Enter email to login" />
+  <button onclick="login()">Magic Login</button>
 
-  <!-- LOGIN -->
-  <div class="card" id="loginCard">
-    <h3>Sign in to continue</h3>
-    <p class="small">We’ll send you a secure magic link.</p>
-    <input id="emailInput" type="email" placeholder="you@company.com" />
-    <button class="primary" onclick="login()">Send magic link</button>
-    <p class="small" id="loginStatus"></p>
-  </div>
+  <textarea id="notes" placeholder="Paste meeting notes..."></textarea>
 
-  <!-- APP -->
-  <div class="card" id="appCard" style="display:none;">
-    <p>👋 Logged in as <strong id="userEmail"></strong></p>
+  <button onclick="generate()">Generate Action Items</button>
 
-    <textarea id="notes" placeholder="Paste meeting notes here..."></textarea>
-    <button class="primary" onclick="generate()">Generate Action Items</button>
-
-    <div class="result" id="result"></div>
-
-    <button class="secondary" onclick="logout()">Logout</button>
-  </div>
-
+  <div id="output" class="output"></div>
 </div>
 
 <script>
-/* ================= SUPABASE CONFIG ================= */
-const SUPABASE_URL = "https://vkoyrewmaurbsxxvyhuf.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrb3lyZXdtYXVyYnN4eHZ5aHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5NzM2OTAsImV4cCI6MjA4NDU0OTY5MH0.UpvMq4KN1XZgNeJUAK1pn1q2TnXDSkyRI6bMbwjgNG8";
+  const supabase = window.supabase.createClient(
+    "YOUR_SUPABASE_URL",
+    "YOUR_SUPABASE_ANON_KEY"
+  );
 
-const supabase = supabasejs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-/* ================================================== */
-
-async function login() {
-  const email = document.getElementById("emailInput").value;
-  const status = document.getElementById("loginStatus");
-
-  if (!email) {
-    status.innerText = "Please enter your email.";
-    return;
+  async function login() {
+    const email = document.getElementById("email").value;
+    await supabase.auth.signInWithOtp({ email });
+    alert("Check your email for login link");
   }
 
-  status.innerText = "Sending magic link…";
+  async function generate() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      alert("Please login first");
+      return;
+    }
 
-  const { error } = await supabase.auth.signInWithOtp({ email });
+    const transcript = document.getElementById("notes").value;
+    document.getElementById("output").innerText = "Analyzing...";
 
-  if (error) {
-    status.innerText = "Error sending email.";
-  } else {
-    status.innerText = "Check your email for the login link.";
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transcript })
+    });
+
+    const data = await res.json();
+    document.getElementById("output").innerText = data.formatted;
   }
-}
-
-async function logout() {
-  await supabase.auth.signOut();
-  location.reload();
-}
-
-async function generate() {
-  const notes = document.getElementById("notes").value;
-  if (!notes) return;
-
-  const result = document.getElementById("result");
-  result.innerText = "Analyzing…";
-
-  const res = await fetch("/api/analyze", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: notes })
-  });
-
-  const data = await res.json();
-  result.innerText = data.result || "AI failed";
-}
-
-supabase.auth.onAuthStateChange((event, session) => {
-  if (session?.user) {
-    document.getElementById("loginCard").style.display = "none";
-    document.getElementById("appCard").style.display = "block";
-    document.getElementById("userEmail").innerText = session.user.email;
-  }
-});
 </script>
-
 </body>
 </html>
+
